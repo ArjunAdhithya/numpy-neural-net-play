@@ -86,7 +86,19 @@ def visualize_neuron(neuron):
     graph.edge("act", "out")
     return graph
 
+def _column(graph, name, node_ids):
+    with graph.subgraph(name=name) as column:
+        column.attr(rank="same")
+        for node_id in node_ids:
+            column.node(node_id)
+        for left, right in zip(node_ids, node_ids[1:]):
+            column.edge(left, right, style="invis")
+
+
 def visualize_layer(layer):
+    if not layer.neurons or not hasattr(layer.neurons[0], "last_x"):
+        raise RuntimeError("call forward before visualize_layer")
+
     x = layer.neurons[0].last_x
     graph = graphviz.Digraph(graph_attr={"rankdir": "LR"})
 
@@ -100,4 +112,47 @@ def visualize_layer(layer):
             graph.edge(f"x{j}", f"h{i}")
         graph.edge(f"h{i}", f"y{i}")
 
+    return graph
+
+
+def visualize_net(net):
+    layers = net.layers
+    if not layers or not hasattr(layers[0].neurons[0], "last_x"):
+        raise RuntimeError("call forward before visualize_net")
+
+    graph = graphviz.Digraph(graph_attr={"rankdir": "LR", "nodesep": "0.28", "ranksep": "0.75"})
+    x = np.asarray(layers[0].neurons[0].last_x, dtype=float)
+
+    input_ids = []
+    for j, value in enumerate(x):
+        node_id = f"x{j}"
+        graph.node(node_id, f"x{j}\\n{float(value):.4f}", shape="box")
+        input_ids.append(node_id)
+    _column(graph, "inputs", input_ids)
+
+    previous_ids = input_ids
+    for layer_i, layer in enumerate(layers):
+        neuron_ids = []
+        for i, neuron in enumerate(layer.neurons):
+            node_id = f"L{layer_i}h{i}"
+            graph.node(
+                node_id,
+                f"L{layer_i} n{i}\\n{neuron.activation.__name__}\\n{float(neuron.out):.4f}",
+                shape="circle",
+            )
+            neuron_ids.append(node_id)
+        _column(graph, f"layer{layer_i}", neuron_ids)
+        for src in previous_ids:
+            for dst in neuron_ids:
+                graph.edge(src, dst)
+        previous_ids = neuron_ids
+
+    out_ids = []
+    for i, neuron in enumerate(layers[-1].neurons):
+        node_id = f"y{i}"
+        graph.node(node_id, f"out{i}\\n{float(neuron.out):.4f}", shape="box")
+        out_ids.append(node_id)
+    _column(graph, "outputs", out_ids)
+    for src, dst in zip(previous_ids, out_ids):
+        graph.edge(src, dst)
     return graph
