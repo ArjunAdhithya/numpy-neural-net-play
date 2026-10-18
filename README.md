@@ -15,7 +15,7 @@ The same track will later be redone in PyTorch (`torch-neural-net-play`)
 
 - [x] 01 — Matrix multiplication (NumPy)
 - [x] 02 — Single neuron (weights, bias, activation)
-- [ ] 03 — Layer of neurons
+- [x] 03 — Layer of neurons
 - [ ] 04 — Stacking layers
 - [ ] 05 — Forward pass
 - [ ] 06 — Loss functions

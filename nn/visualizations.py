@@ -85,3 +85,19 @@ def visualize_neuron(neuron):
     graph.edge("z", "act")
     graph.edge("act", "out")
     return graph
+
+def visualize_layer(layer):
+    x = layer.neurons[0].last_x
+    graph = graphviz.Digraph(graph_attr={"rankdir": "LR"})
+
+    for j, value in enumerate(x):
+        graph.node(f"x{j}", f"x{j}\\n{value:.4f}", shape="box")
+
+    for i, neuron in enumerate(layer.neurons):
+        graph.node(f"h{i}", f"neuron {i}\\n{neuron.activation.__name__}", shape="circle")
+        graph.node(f"y{i}", f"out{i}\\n{float(neuron.out):.4f}", shape="box")
+        for j in range(layer.n_inputs):
+            graph.edge(f"x{j}", f"h{i}")
+        graph.edge(f"h{i}", f"y{i}")
+
+    return graph
