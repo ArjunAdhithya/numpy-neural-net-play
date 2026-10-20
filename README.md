@@ -17,7 +17,7 @@ The same track will later be redone in PyTorch (`torch-neural-net-play`)
 - [x] 02 — Single neuron (weights, bias, activation)
 - [x] 03 — Layer of neurons
 - [x] 04 — Stacking layers
-- [ ] 05 — Forward pass
+- [x] 05 — Forward pass
 - [ ] 06 — Loss functions
 - [ ] 07 — Backpropagation
 - [ ] 08 — Gradient checking
