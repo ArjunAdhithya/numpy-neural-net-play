@@ -18,7 +18,7 @@ The same track will later be redone in PyTorch (`torch-neural-net-play`)
 - [x] 03 — Layer of neurons
 - [x] 04 — Stacking layers
 - [x] 05 — Forward pass
-- [ ] 06 — Loss functions
-- [ ] 07 — Backpropagation
+- [x] 06 — Loss functions
+- [x] 07 — Backpropagation
 - [ ] 08 — Gradient checking
-- [ ] 09 — Training on a toy dataset
+- [ ] 09 — Training on a data
