@@ -23,3 +23,17 @@ The same track will later be redone in PyTorch (`torch-neural-net-play`)
 - [x] 07 — Backpropagation
 - [x] 08 — Gradient checking
 - [x] 09 — Training on a data
+
+## Cat / dog
+
+![Cat / dog network](docs/cat_dog_arch.png)
+
+Eight filters read the 32×32 gray photo. Eight more read a neighborhood of those maps. The 392 numbers go straight into a sigmoid. This is the locked network, saved at epoch 6: training loss 0.689, test loss 0.694, test accuracy 0.54 on 140 photos.
+
+```python
+from nn.checkpoint import load_checkpoint
+
+net, meta = load_checkpoint("models/cat_dog.npz")
+```
+
+The run is in `notebooks/train_cat_dog.ipynb`. The photos in `data/cat_dog` stay on your machine.

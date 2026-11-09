@@ -6,9 +6,13 @@ from nn.loss import LOSS_DERIVATIVES
 def sgd_step(net, lr):
     # rebind instead of -= so layers built from one shared W array stay independent
     for layer in net.layers:
-        for neuron in layer.neurons:
-            neuron.w = neuron.w - lr * neuron.dW
-            neuron.b = neuron.b - lr * neuron.db
+        if hasattr(layer, "neurons"):
+            for neuron in layer.neurons:
+                neuron.w = neuron.w - lr * neuron.dW
+                neuron.b = neuron.b - lr * neuron.db
+        else:
+            layer.W = layer.W - lr * layer.dW
+            layer.b = layer.b - lr * layer.db
 
 
 def train_step(net, x, target, loss_fn, lr):

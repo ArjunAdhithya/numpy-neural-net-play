@@ -13,26 +13,45 @@ def numerical_gradients(net, x, target, loss_fn, eps=1e-5):
 
     grads = []
     for layer in net.layers:
+        if hasattr(layer, "neurons"):
+            params = [(neuron, "w", "b") for neuron in layer.neurons]
+        else:
+            params = [(layer, "W", "b")]
         layer_grads = []
-        for neuron in layer.neurons:
-            w, b = neuron.w, neuron.b
+        for owner, w_name, b_name in params:
+            w = getattr(owner, w_name)
+            b = np.asarray(getattr(owner, b_name), dtype=float)
             dW = np.zeros_like(w)
-            for j in range(w.size):
-                step = np.zeros_like(w)
+            flat = dW.ravel()
+            for j in range(flat.size):
+                step = np.zeros(flat.size)
                 step[j] = eps
-                neuron.w = w + step
+                setattr(owner, w_name, w + step.reshape(w.shape))
                 plus = loss()
-                neuron.w = w - step
+                setattr(owner, w_name, w - step.reshape(w.shape))
                 minus = loss()
-                dW[j] = (plus - minus) / (2 * eps)
-            neuron.w = w
+                flat[j] = (plus - minus) / (2 * eps)
+            setattr(owner, w_name, w)
 
-            neuron.b = b + eps
-            plus = loss()
-            neuron.b = b - eps
-            minus = loss()
-            neuron.b = b
-            layer_grads.append((dW, (plus - minus) / (2 * eps)))
+            if b.ndim == 0:
+                setattr(owner, b_name, b + eps)
+                plus = loss()
+                setattr(owner, b_name, b - eps)
+                minus = loss()
+                setattr(owner, b_name, b)
+                layer_grads.append((dW, (plus - minus) / (2 * eps)))
+            else:
+                db = np.zeros_like(b)
+                for j in range(b.size):
+                    step = np.zeros_like(b)
+                    step[j] = eps
+                    setattr(owner, b_name, b + step)
+                    plus = loss()
+                    setattr(owner, b_name, b - step)
+                    minus = loss()
+                    db[j] = (plus - minus) / (2 * eps)
+                setattr(owner, b_name, b)
+                layer_grads.extend((dW[j], float(db[j])) for j in range(db.size))
         grads.append(layer_grads)
     return grads
 
@@ -40,10 +59,13 @@ def numerical_gradients(net, x, target, loss_fn, eps=1e-5):
 def analytic_gradients(net, x, target, loss_fn):
     pred = net.forward(x)
     net.backward(LOSS_DERIVATIVES[loss_fn](target, pred))
-    return [
-        [(neuron.dW.copy(), float(neuron.db)) for neuron in layer.neurons]
-        for layer in net.layers
-    ]
+    grads = []
+    for layer in net.layers:
+        if hasattr(layer, "neurons"):
+            grads.append([(neuron.dW.copy(), float(neuron.db)) for neuron in layer.neurons])
+        else:
+            grads.append([(layer.dW[j].copy(), float(layer.db[j])) for j in range(layer.n_filters)])
+    return grads
 
 
 def gradient_check(net, x, target, loss_fn, eps=1e-5):
@@ -56,7 +78,7 @@ def gradient_check(net, x, target, loss_fn, eps=1e-5):
     rows = []
     for li, (layer_a, layer_n) in enumerate(zip(analytic, numeric)):
         for ni, ((dW_a, db_a), (dW_n, db_n)) in enumerate(zip(layer_a, layer_n)):
-            for j, (a, n) in enumerate(zip(dW_a, dW_n)):
+            for j, (a, n) in enumerate(zip(np.ravel(dW_a), np.ravel(dW_n))):
                 rows.append({"param": f"L{li} n{ni} w{j}", "analytic": float(a), "numeric": float(n),
                              "rel_error": relative_error(a, n)})
             rows.append({"param": f"L{li} n{ni} b", "analytic": db_a, "numeric": float(db_n),

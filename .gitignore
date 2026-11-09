@@ -24,3 +24,6 @@ data/
 *.npz
 *.npy
 *.pkl
+
+# the locked cat/dog weights stay in the repo
+!models/cat_dog.npz

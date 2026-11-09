@@ -1,6 +1,10 @@
 import numpy as np
 
-from nn import multipleNeuron, stackLayers, sigmoid, tanh, relu, linear
+import tempfile
+from pathlib import Path
+
+from nn import multipleNeuron, stackLayers, convLayer, sigmoid, tanh, relu, linear
+from nn.checkpoint import load_checkpoint, save_checkpoint
 from nn.activations import DERIVATIVES
 from nn.gradcheck import gradient_check, max_relative_error
 from nn.loss import LOSS_DERIVATIVES, binary_cross_entropy, mean_squared_error, softmax_cross_entropy
@@ -79,6 +83,76 @@ def test_loss_derivatives_match_numerical():
             for e in np.eye(3)
         ])
         np.testing.assert_allclose(derivative(target, pred), numeric, rtol=1e-6, err_msg=loss_fn.__name__)
+
+
+def test_conv_relu_then_sigmoid_bce():
+    rng = np.random.default_rng(1)
+    side = 8
+    conv = convLayer(
+        n_filters=2, side=side, kernel=3, stride=2, activation=relu,
+        W=rng.normal(0, 0.5, (2, 3, 3)), b=np.array([0.8, -0.8]),
+    )
+    hidden = multipleNeuron(
+        n=3, n_inputs=conv.n, activation=tanh,
+        W=rng.normal(0, 0.5, (3, conv.n)), b=rng.normal(0, 0.2, 3),
+    )
+    output = multipleNeuron(
+        n=1, n_inputs=3, activation=sigmoid,
+        W=rng.normal(0, 0.5, (1, 3)), b=np.array([0.1]),
+    )
+    net = stackLayers([conv, hidden, output])
+    x = rng.random(side * side)
+    net.forward(x)
+    assert np.min(np.abs(conv.z)) > 1e-3
+    assert_gradients_match(net, x, [1.0], binary_cross_entropy)
+
+
+def test_two_conv_layers_relu_then_sigmoid_bce():
+    rng = np.random.default_rng(2)
+    conv1 = convLayer(
+        n_filters=2, side=8, kernel=3, stride=2, activation=relu,
+        W=rng.normal(0, 0.5, (2, 3, 3)), b=np.array([0.8, -0.8]),
+    )
+    conv2 = convLayer(
+        n_filters=2, side=conv1.out_side, in_channels=conv1.n_filters,
+        kernel=3, stride=1, activation=relu,
+        W=rng.normal(0, 0.4, (2, conv1.n_filters, 3, 3)), b=np.array([0.6, 0.6]),
+    )
+    hidden = multipleNeuron(
+        n=3, n_inputs=conv2.n, activation=tanh,
+        W=rng.normal(0, 0.5, (3, conv2.n)), b=rng.normal(0, 0.2, 3),
+    )
+    output = multipleNeuron(
+        n=1, n_inputs=3, activation=sigmoid,
+        W=rng.normal(0, 0.5, (1, 3)), b=np.array([0.1]),
+    )
+    net = stackLayers([conv1, conv2, hidden, output])
+    x = rng.random(8 * 8)
+    net.forward(x)
+    assert np.min(np.abs(conv1.z)) > 1e-3
+    assert np.min(np.abs(conv2.z)) > 1e-3
+    assert_gradients_match(net, x, [0.0], binary_cross_entropy)
+
+
+def test_checkpoint_reloads_conv_and_dense():
+    rng = np.random.default_rng(4)
+    conv = convLayer(
+        n_filters=2, side=8, kernel=3, stride=2, activation=relu,
+        W=rng.normal(0, 0.3, (2, 3, 3)), b=np.array([0.2, -0.2]),
+    )
+    output = multipleNeuron(
+        n=1, n_inputs=conv.n, activation=sigmoid,
+        W=rng.normal(0, 0.3, (1, conv.n)), b=np.zeros(1),
+    )
+    net = stackLayers([conv, output])
+    x = rng.random(8 * 8)
+    before = np.array(net.forward(x))
+    with tempfile.TemporaryDirectory() as folder:
+        path = save_checkpoint(net, Path(folder) / "net", epoch=6)
+        loaded, meta = load_checkpoint(path)
+    assert meta["epoch"] == 6
+    assert str(loaded) == str(net)
+    np.testing.assert_allclose(loaded.forward(x), before)
 
 
 def test_wrong_derivative_is_caught():

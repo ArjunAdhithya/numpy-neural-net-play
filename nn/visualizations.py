@@ -220,6 +220,47 @@ def plot_digits(X, labels, preds=None, n_cols=10, side=28):
     return fig
 
 
+def _image_caption(value, names):
+    if names is None:
+        return str(value)
+    return names[int(value)]
+
+
+def plot_images(X, labels, preds=None, shape=None, names=None, n_cols=10):
+    X = np.asarray(X)
+    if shape is None:
+        side = int(np.sqrt(X.shape[1]))
+        shape = (side, side)
+
+    n_rows = int(np.ceil(len(X) / n_cols))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(1.1 * n_cols, 1.3 * n_rows), squeeze=False)
+    for ax in axes.ravel():
+        ax.axis("off")
+    for i, ax in enumerate(axes.ravel()[:len(X)]):
+        image = X[i].reshape(shape)
+        if image.ndim == 2:
+            ax.imshow(image, cmap="gray")
+        elif np.issubdtype(image.dtype, np.floating):
+            ax.imshow(np.clip(image, 0, 1))
+        else:
+            ax.imshow(image)
+        title = _image_caption(labels[i], names)
+        color = "black"
+        if preds is not None:
+            title = _image_caption(preds[i], names)
+            color = "green" if preds[i] == labels[i] else "red"
+            if preds[i] != labels[i]:
+                title = f"{title} (true {_image_caption(labels[i], names)})"
+        ax.set_title(title, color=color, fontsize=10 if preds is None or preds[i] == labels[i] else 8)
+    fig.tight_layout()
+    plt.close(fig)
+    return fig
+
+
+def plot_digits(X, labels, preds=None, n_cols=10, side=28):
+    return plot_images(X, labels, preds=preds, shape=(side, side), n_cols=n_cols)
+
+
 def plot_confusion_matrix(y_true, y_pred, n_classes=10):
     matrix = np.zeros((n_classes, n_classes), dtype=int)
     for t, p in zip(y_true, y_pred):
