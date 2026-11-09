@@ -10,6 +10,7 @@ The same track will later be redone in PyTorch (`torch-neural-net-play`)
 
 - `notebooks/` — one notebook per step, for exploring and understanding
 - `nn/` — engine: clean, reusable code 
+- `tests/` — gradient checks, run with `python -m tests.test_gradients`
 
 ## Check-lists:
 
@@ -20,5 +21,5 @@ The same track will later be redone in PyTorch (`torch-neural-net-play`)
 - [x] 05 — Forward pass
 - [x] 06 — Loss functions
 - [x] 07 — Backpropagation
-- [ ] 08 — Gradient checking
-- [ ] 09 — Training on a data
+- [x] 08 — Gradient checking
+- [x] 09 — Training on a data

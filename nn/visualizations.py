@@ -156,3 +156,86 @@ def visualize_net(net):
     for src, dst in zip(previous_ids, out_ids):
         graph.edge(src, dst)
     return graph
+
+
+def plot_history(history):
+    fig, (loss_ax, acc_ax) = plt.subplots(1, 2, figsize=(11, 3.5))
+    epochs = history["epoch"]
+    loss_ax.plot(epochs, history["loss"], label="train")
+    acc_ax.plot(epochs, history["accuracy"], label="train")
+    if history.get("val_loss"):
+        loss_ax.plot(epochs, history["val_loss"], label="val")
+        acc_ax.plot(epochs, history["val_accuracy"], label="val")
+    loss_ax.set_title("loss")
+    acc_ax.set_title("accuracy")
+    acc_ax.set_ylim(0, 1.05)
+    for ax in (loss_ax, acc_ax):
+        ax.set_xlabel("epoch")
+        ax.legend()
+    fig.tight_layout()
+    plt.close(fig)
+    return fig
+
+
+def plot_decision_boundary(net, X, y, resolution=80, padding=0.5):
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float)
+    if X.shape[1] != 2:
+        raise ValueError("plot_decision_boundary draws 2-feature inputs only")
+
+    xs = np.linspace(X[:, 0].min() - padding, X[:, 0].max() + padding, resolution)
+    ys = np.linspace(X[:, 1].min() - padding, X[:, 1].max() + padding, resolution)
+    grid_x, grid_y = np.meshgrid(xs, ys)
+    points = np.column_stack([grid_x.ravel(), grid_y.ravel()])
+    probs = np.array([net.forward(p)[0] for p in points]).reshape(grid_x.shape)
+
+    fig, ax = plt.subplots(figsize=(5.5, 4.5))
+    filled = ax.contourf(grid_x, grid_y, probs, levels=np.linspace(0, 1, 11), cmap="RdBu_r", alpha=0.6)
+    ax.contour(grid_x, grid_y, probs, levels=[0.5], colors="k", linewidths=1)
+    ax.scatter(X[:, 0], X[:, 1], c=y, cmap="RdBu_r", edgecolors="k", s=25)
+    fig.colorbar(filled, ax=ax, label="network output")
+    ax.set_xlabel("x0")
+    ax.set_ylabel("x1")
+    fig.tight_layout()
+    plt.close(fig)
+    return fig
+
+
+def plot_digits(X, labels, preds=None, n_cols=10, side=28):
+    X = np.asarray(X)
+    n_rows = int(np.ceil(len(X) / n_cols))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(1.1 * n_cols, 1.3 * n_rows), squeeze=False)
+    for ax in axes.ravel():
+        ax.axis("off")
+    for i, ax in enumerate(axes.ravel()[:len(X)]):
+        ax.imshow(X[i].reshape(side, side), cmap="gray")
+        if preds is None:
+            ax.set_title(str(labels[i]), fontsize=10)
+        elif preds[i] == labels[i]:
+            ax.set_title(str(preds[i]), color="green", fontsize=10)
+        else:
+            ax.set_title(f"{preds[i]} (true {labels[i]})", color="red", fontsize=8)
+    fig.tight_layout()
+    plt.close(fig)
+    return fig
+
+
+def plot_confusion_matrix(y_true, y_pred, n_classes=10):
+    matrix = np.zeros((n_classes, n_classes), dtype=int)
+    for t, p in zip(y_true, y_pred):
+        matrix[t, p] += 1
+
+    fig, ax = plt.subplots(figsize=(5, 4.5))
+    ax.imshow(matrix, cmap="Blues")
+    for t in range(n_classes):
+        for p in range(n_classes):
+            if matrix[t, p]:
+                color = "white" if matrix[t, p] > matrix.max() / 2 else "black"
+                ax.text(p, t, matrix[t, p], ha="center", va="center", color=color)
+    ax.set_xticks(range(n_classes))
+    ax.set_yticks(range(n_classes))
+    ax.set_xlabel("predicted digit")
+    ax.set_ylabel("true digit")
+    fig.tight_layout()
+    plt.close(fig)
+    return fig
